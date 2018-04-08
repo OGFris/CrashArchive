@@ -5,13 +5,12 @@ import (
 	"os"
 
 	"github.com/pmmp/CrashArchive/app/database"
-	"github.com/pmmp/CrashArchive/app/template"
 )
 
 type Config struct {
 	ListenAddress string
 	Database      *database.Config
-	Template      *template.Config
+	Templates     string
 	SlackURL      string
 }
 

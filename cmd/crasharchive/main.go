@@ -10,7 +10,7 @@ import (
 	"github.com/pmmp/CrashArchive/app"
 	"github.com/pmmp/CrashArchive/app/database"
 	"github.com/pmmp/CrashArchive/app/router"
-	"github.com/pmmp/CrashArchive/app/template"
+	"github.com/pmmp/CrashArchive/app/view"
 	"github.com/pmmp/CrashArchive/app/webhook"
 )
 
@@ -29,7 +29,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := template.Preload(config.Template); err != nil {
+	if err := view.Preload(config.Templates); err != nil {
 		log.Fatal(err)
 	}
 

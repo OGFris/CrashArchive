@@ -7,19 +7,19 @@ import (
 	"strconv"
 
 	"github.com/pmmp/CrashArchive/app/crashreport"
-	"github.com/pmmp/CrashArchive/app/template"
 	"github.com/pmmp/CrashArchive/app/database"
+	"github.com/pmmp/CrashArchive/app/view"
 )
 
 func SearchGet(w http.ResponseWriter, r *http.Request) {
-	template.ExecuteTemplate(w, "search", nil)
+	view.ExecuteTemplate(w, "search", nil)
 }
 
 func SearchIDGet(w http.ResponseWriter, r *http.Request) {
 	reportID, err := strconv.Atoi(r.URL.Query().Get("id"))
 	if err != nil {
 		log.Println(err)
-		template.ErrorTemplate(w, "", http.StatusBadRequest)
+		view.ErrorTemplate(w, "", http.StatusBadRequest)
 		return
 	}
 	http.Redirect(w, r, fmt.Sprintf("/view/%d", reportID), http.StatusMovedPermanently)
@@ -30,7 +30,7 @@ func SearchPluginGet(db *database.DB) http.HandlerFunc {
 		plugin := r.URL.Query().Get("plugin")
 		if plugin == "" {
 			log.Println("empty plugin name")
-			template.ErrorTemplate(w, "", http.StatusBadRequest)
+			view.ErrorTemplate(w, "", http.StatusBadRequest)
 			return
 		}
 
@@ -44,7 +44,7 @@ func SearchBuildGet(db *database.DB) http.HandlerFunc {
 		buildID, err := strconv.Atoi(params.Get("build"))
 		if err != nil {
 			log.Println(err)
-			template.ErrorTemplate(w, "", http.StatusBadRequest)
+			view.ErrorTemplate(w, "", http.StatusBadRequest)
 			return
 		}
 
@@ -66,7 +66,7 @@ func SearchReportGet(db *database.DB) http.HandlerFunc {
 		reportID, err := strconv.Atoi(r.URL.Query().Get("id"))
 		if err != nil {
 			log.Println(err)
-			template.ErrorTemplate(w, "", http.StatusBadRequest)
+			view.ErrorTemplate(w, "", http.StatusBadRequest)
 			return
 		}
 
@@ -74,7 +74,7 @@ func SearchReportGet(db *database.DB) http.HandlerFunc {
 		err = db.Get(&report, query, reportID)
 		if err != nil {
 			log.Println(err)
-			template.ErrorTemplate(w, "Report not found", http.StatusNotFound)
+			view.ErrorTemplate(w, "Report not found", http.StatusNotFound)
 			return
 		}
 

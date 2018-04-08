@@ -8,18 +8,18 @@ import (
 	"github.com/go-chi/chi"
 
 	"github.com/pmmp/CrashArchive/app/crashreport"
-	"github.com/pmmp/CrashArchive/app/template"
+	"github.com/pmmp/CrashArchive/app/view"
 )
 
 func ViewIDGet(w http.ResponseWriter, r *http.Request) {
 	reportID, err := strconv.Atoi(chi.URLParam(r, "reportID"))
 	if err != nil {
-		template.ErrorTemplate(w, "Please specify a report", http.StatusNotFound)
+		view.ErrorTemplate(w, "Please specify a report", http.StatusNotFound)
 		return
 	}
 	report, jsonData, err := crashreport.ReadFile(int64(reportID))
 	if err != nil {
-		template.ErrorTemplate(w, "Report not found", http.StatusNotFound)
+		view.ErrorTemplate(w, "Report not found", http.StatusNotFound)
 		return
 	}
 
@@ -30,7 +30,7 @@ func ViewIDGet(w http.ResponseWriter, r *http.Request) {
 	v["AttachedIssue"] = "None"
 	v["ReportID"] = reportID
 
-	template.ExecuteTemplate(w, "view", v)
+	view.ExecuteTemplate(w, "view", v)
 }
 
 var cleanRE = regexp.MustCompile(`[^A-Za-z0-9_\-\.\,\;\:/\#\(\)\\ ]`)

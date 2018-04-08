@@ -11,13 +11,13 @@ import (
 	"strings"
 
 	"github.com/pmmp/CrashArchive/app/crashreport"
-	"github.com/pmmp/CrashArchive/app/template"
 	"github.com/pmmp/CrashArchive/app/database"
+	"github.com/pmmp/CrashArchive/app/view"
 	"github.com/pmmp/CrashArchive/app/webhook"
 )
 
 func SubmitGet(w http.ResponseWriter, r *http.Request) {
-	template.ExecuteTemplate(w, "submit", nil)
+	view.ExecuteTemplate(w, "submit", nil)
 }
 
 func SubmitPost(db *database.DB, wh *webhook.Webhook) http.HandlerFunc {
@@ -87,7 +87,7 @@ func SubmitPost(db *database.DB, wh *webhook.Webhook) http.HandlerFunc {
 		email := r.FormValue("email")
 		if err = report.WriteFile(id, name, email); err != nil {
 			log.Printf("failed to write file: %d\n", id)
-			sendError(w,"", http.StatusInternalServerError, isAPI)
+			sendError(w, "", http.StatusInternalServerError, isAPI)
 			return
 		}
 
@@ -117,7 +117,7 @@ func sendError(w http.ResponseWriter, message string, status int, isAPI bool) {
 			"error": message,
 		})
 	} else {
-		template.ErrorTemplate(w, message, status)
+		view.ErrorTemplate(w, message, status)
 	}
 }
 

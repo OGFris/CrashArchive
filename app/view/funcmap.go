@@ -1,14 +1,14 @@
-package template
+package view
 
 import (
 	"fmt"
 	"html/template"
+	"log"
+	"net/url"
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
-	"net/url"
-	"log"
 )
 
 var funcMap = template.FuncMap{

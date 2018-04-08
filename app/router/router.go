@@ -9,9 +9,9 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 
-	"github.com/pmmp/CrashArchive/app/handler"
-	"github.com/pmmp/CrashArchive/app/template"
 	"github.com/pmmp/CrashArchive/app/database"
+	"github.com/pmmp/CrashArchive/app/handler"
+	"github.com/pmmp/CrashArchive/app/view"
 	"github.com/pmmp/CrashArchive/app/webhook"
 )
 
@@ -30,7 +30,7 @@ func New(db *database.DB, wh *webhook.Webhook) *chi.Mux {
 		r.Use(middleware.Logger)
 
 		r.NotFound(func(w http.ResponseWriter, r *http.Request) {
-			template.ErrorTemplate(w, "", http.StatusNotFound)
+			view.ErrorTemplate(w, "", http.StatusNotFound)
 		})
 
 		r.Get("/", handler.HomeGet)

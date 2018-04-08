@@ -9,7 +9,7 @@ import (
 
 	"github.com/pmmp/CrashArchive/app/crashreport"
 	"github.com/pmmp/CrashArchive/app/database"
-	"github.com/pmmp/CrashArchive/app/template"
+	"github.com/pmmp/CrashArchive/app/view"
 )
 
 func ListGet(db *database.DB) http.HandlerFunc {
@@ -30,7 +30,7 @@ func ListFilteredReports(w http.ResponseWriter, r *http.Request, db *database.DB
 	if err != nil {
 		log.Println(err)
 		log.Println(queryCount)
-		template.ErrorTemplate(w, "", http.StatusInternalServerError)
+		view.ErrorTemplate(w, "", http.StatusInternalServerError)
 		return
 	}
 
@@ -42,7 +42,7 @@ func ListFilteredReports(w http.ResponseWriter, r *http.Request, db *database.DB
 	if pageParam != "" {
 		pageId, err = strconv.Atoi(pageParam)
 		if err != nil || pageId <= 0 || (pageId-1)*pageSize > total {
-			template.ErrorTemplate(w, "", http.StatusNotFound)
+			view.ErrorTemplate(w, "", http.StatusNotFound)
 			return
 		}
 	} else {
@@ -57,9 +57,9 @@ func ListFilteredReports(w http.ResponseWriter, r *http.Request, db *database.DB
 	if err != nil {
 		log.Println(err)
 		log.Println(querySelect)
-		template.ErrorTemplate(w, "", http.StatusInternalServerError)
+		view.ErrorTemplate(w, "", http.StatusInternalServerError)
 		return
 	}
 
-	template.ExecuteListTemplate(w, reports, r.URL.String(), pageId, rangeStart, total)
+	view.ExecuteListTemplate(w, reports, r.URL.String(), pageId, rangeStart, total)
 }

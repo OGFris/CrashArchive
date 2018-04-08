@@ -1,4 +1,4 @@
-package template
+package view
 
 import (
 	"html/template"
@@ -8,23 +8,23 @@ import (
 	"github.com/pmmp/CrashArchive/app/crashreport"
 )
 
-type Config struct {
-	Folder    string
-	Extension string
-}
+const (
+	templateExtension = ".html"
+	templateLayout    = "layout"
+)
 
 var t map[string]*template.Template
 
-func Preload(cfg *Config) error {
+func Preload(path string) error {
 	t = make(map[string]*template.Template)
-	abs, _ := filepath.Abs(cfg.Folder)
+	abs, _ := filepath.Abs(path)
 
-	layoutFiles, err := filepath.Glob(filepath.Join(abs, "layout", "*."+cfg.Extension))
+	layoutFiles, err := filepath.Glob(filepath.Join(abs, "layout", "*"+templateExtension))
 	if err != nil {
 		return err
 	}
 
-	pageFiles, err := filepath.Glob(filepath.Join(abs, "*."+cfg.Extension))
+	pageFiles, err := filepath.Glob(filepath.Join(abs, "*"+templateExtension))
 	if err != nil {
 		return err
 	}
@@ -33,7 +33,7 @@ func Preload(cfg *Config) error {
 		templateFiles := append(layoutFiles, page)
 		_, fname := filepath.Split(page)
 
-		name := fname[:len(fname)-len(cfg.Extension)-1]
+		name := fname[:len(fname)-len(templateExtension)]
 		tmpl, err := template.New(name).Funcs(funcMap).ParseFiles(templateFiles...)
 		if err != nil {
 			return err
