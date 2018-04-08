@@ -6,7 +6,7 @@ build:
 	go build -o ./bin/$(BINARY_NAME) $(MAIN)
 
 run: build
-	./bin/$(BINARY_NAME)
+	cd bin; ./$(BINARY_NAME)
 
 build/linux:
 	GOOS=linux go build -o ./bin/$(BINARY_LINUX)
@@ -16,4 +16,4 @@ cli/mysql:
 
 defaultconfig:
 	cp ./default-docker-compose.yml ./docker-compose.yml
-	cp ./config/default-config.json ./config/config.json
+	cp ./default-config.json ./bin/config.json

@@ -19,7 +19,7 @@ const dbRetry = 5
 func main() {
 	log.SetFlags(log.Lshortfile)
 
-	configPath := flag.String("c", "./config/config.json", "path to `config.json`")
+	configPath := flag.String("c", "config.json", "path to `config.json`")
 	flag.Parse()
 
 	var err error
