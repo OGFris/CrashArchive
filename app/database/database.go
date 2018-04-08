@@ -12,6 +12,11 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
+const (
+	retryTimes = 5
+	retryDelay = 5 * time.Second
+)
+
 type DB struct {
 	*sqlx.DB
 }
@@ -20,27 +25,21 @@ func New(config *Config) (*DB, error) {
 	if config.Username == "" || config.Password == "" {
 		return nil, errors.New("Username and password for mysql database not set in config.json")
 	}
-	db, err := sqlx.Connect("mysql", DSN(config))
-	if err != nil {
-		return nil, err
-	}
-	if err := db.Ping(); err != nil {
-		log.Fatal("failed to ping db")
+
+	for i := 1; i <= retryTimes; i++ {
+		log.Printf("Connecting to database %d/%d", i, retryTimes)
+		db, err := sqlx.Connect("mysql", DSN(config))
+		if err == nil {
+			log.Printf("Connected to database")
+			return &DB{db}, nil
+		}
+
+		if i != retryTimes {
+			time.Sleep(retryDelay)
+		}
 	}
 
-	//Upgrade old database
-	var exists int
-	db.Get(&exists,`SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_NAME = 'crash_reports' AND COLUMN_NAME = 'duplicate'`)
-	if exists == 0 {
-		db.Exec(`ALTER TABLE crash_reports ADD COLUMN duplicate BOOL NOT NULL DEFAULT FALSE`)
-	}
-
-	db.Get(&exists,`SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_NAME = 'crash_reports' AND COLUMN_NAME = 'reportType'`)
-	if exists > 0 {
-		db.Exec(`ALTER TABLE crash_reports DROP COLUMN reportType`)
-	}
-
-	return &DB{db}, nil
+	return nil, errors.New("failed to connect")
 }
 
 var queryInsertReport = `INSERT INTO crash_reports

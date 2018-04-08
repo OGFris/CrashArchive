@@ -2,10 +2,10 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
-	"time"
 
 	"github.com/pmmp/CrashArchive/app"
 	"github.com/pmmp/CrashArchive/app/database"
@@ -38,28 +38,9 @@ func main() {
 		wh = webhook.New(config.SlackURL)
 	}
 
-	var retry int
-	var db *database.DB = nil
-loop:
-	for {
-		if retry == dbRetry {
-			log.Println("could not connect to database")
-			os.Exit(1)
-		}
-
-		db, err = database.New(config.Database)
-		if err == nil {
-			if err := db.Ping(); err != nil {
-				log.Println(err)
-				os.Exit(1)
-			}
-			break loop
-		} else {
-			log.Println(err)
-		}
-		log.Printf("unable to connect to database: sleeping...\n")
-		time.Sleep(5 * time.Second)
-		retry++
+	db, err := database.New(config.Database)
+	if err != nil {
+		log.Fatal(fmt.Errorf("database error: %v", err))
 	}
 
 	r := router.New(db, wh)
