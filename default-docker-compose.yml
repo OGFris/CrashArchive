@@ -1,20 +1,27 @@
-db:
-    build: ./docker/db/
+version: "3"
+services:
+  db:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile-db
     environment:
-        MYSQL_ROOT_PASSWORD: password
-        MYSQL_DATABASE: crash_archive
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: crash_archive
     volumes:
-        - ./volumes/mysql:/var/lib/mysql
-ca:
-    build: ./docker/ca/
+      - dbdata:/var/lib/mysql
+  app:
+    depends_on:
+      - db
+    build:
+      context: .
+      dockerfile: docker/Dockerfile-app
     ports:
-        - "8080:80"
+      - "8080:80"
     volumes:
-        - ./bin/ca-pmmp-linux:/app/ca-pmmp-linux
-        - ./templates:/app/templates
-        - ./config:/app/config
-        - ./volumes/reports:/app/reports
-        - ./static:/app/static
-        - /etc/ssl/certs/ca-certificates.crt:/etc/ssl/certs/ca-certificates.crt
-    links:
-        - db:db
+      - ./templates:/app/templates
+      - ./assets:/app/assets
+      - ./config.json:/app/config.json
+      - reportdata:/reports
+volumes:
+  dbdata:
+  reportdata:

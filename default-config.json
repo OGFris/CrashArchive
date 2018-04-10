@@ -8,5 +8,7 @@
         "Name":"crash_archive",
         "Parameter":"?parseTime=true"
     },
-    "Templates":"./templates"
+    "Templates":"./templates",
+    "Assets":"./assets",
+    "Reports":"/reports"
 }

@@ -1,0 +1,4 @@
+FROM mysql:5.7
+
+# the sql file is executed when the container is created
+ADD ./database.sql /docker-entrypoint-initdb.d/

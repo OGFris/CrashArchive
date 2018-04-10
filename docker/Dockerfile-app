@@ -1,0 +1,15 @@
+# build container
+FROM golang:1.10.1-alpine3.7 as builder
+ENV GOPATH /go/
+ENV GO_WORKDIR $GOPATH/src/github.com/pmmp/CrashArchive/
+WORKDIR $GO_WORKDIR
+ADD ./app $GO_WORKDIR/app/
+ADD ./cmd $GO_WORKDIR/cmd/
+ADD ./vendor $GO_WORKDIR/vendor/
+RUN go install github.com/pmmp/CrashArchive/cmd/crasharchive
+
+# final container
+FROM alpine:3.7
+WORKDIR /app
+COPY --from=builder /go/bin/crasharchive /app/crasharchive
+ENTRYPOINT ["./crasharchive"]

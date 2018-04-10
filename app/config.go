@@ -12,6 +12,8 @@ type Config struct {
 	Database      *database.Config
 	Templates     string
 	SlackURL      string
+	Assets        string
+	Reports       string
 }
 
 func LoadConfig(configPath string) (*Config, error) {
