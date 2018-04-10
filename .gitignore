@@ -2,5 +2,5 @@ bin
 tmp
 /reports
 volumes/
-config/config.json
+config.json
 docker-compose.yml
