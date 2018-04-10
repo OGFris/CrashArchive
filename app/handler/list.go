@@ -1,65 +1,44 @@
 package handler
 
 import (
+	"errors"
 	"log"
 	"net/http"
 
-	"fmt"
 	"strconv"
-
-	"github.com/pmmp/CrashArchive/app/crashreport"
-	"github.com/pmmp/CrashArchive/app/database"
-	"github.com/pmmp/CrashArchive/app/view"
 )
-
-func ListGet(db *database.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		ListFilteredReports(w, r, db, "WHERE duplicate = false")
-	}
-}
 
 const pageSize = 50
 
-func ListFilteredReports(w http.ResponseWriter, r *http.Request, db *database.DB, filter string, filterParams ...interface{}) {
+type List struct{ *Common }
+
+func (l List) Get(w http.ResponseWriter, r *http.Request) {
+	pageID, err := PageID(r.URL.Query().Get("page"))
+	if err != nil {
+		log.Println(err)
+		l.View.Error(w, "", http.StatusNotFound)
+		return
+	}
+
+	total, start, reports, err := l.DB.GetFilteredReports(pageID, pageSize, "WHERE duplicate = false")
+	if err != nil {
+		log.Println(err)
+		l.View.Error(w, "", http.StatusInternalServerError)
+		return
+	}
+
+	l.View.ExecuteList(w, reports, r.URL.String(), pageID, start, total)
+}
+
+func PageID(page string) (int, error) {
+	var pageID int = 1
 	var err error
 
-	var total int
-
-	queryCount := fmt.Sprintf("SELECT COUNT(*) FROM crash_reports %s", filter)
-	err = db.Get(&total, queryCount, filterParams...)
-	if err != nil {
-		log.Println(err)
-		log.Println(queryCount)
-		view.ErrorTemplate(w, "", http.StatusInternalServerError)
-		return
-	}
-
-	var pageId int
-
-	params := r.URL.Query()
-
-	pageParam := params.Get("page")
-	if pageParam != "" {
-		pageId, err = strconv.Atoi(pageParam)
-		if err != nil || pageId <= 0 || (pageId-1)*pageSize > total {
-			view.ErrorTemplate(w, "", http.StatusNotFound)
-			return
+	if page != "" {
+		pageID, err = strconv.Atoi(page)
+		if err != nil || pageID <= 0 {
+			return pageID, errors.New("invalid pageID")
 		}
-	} else {
-		pageId = 1
 	}
-
-	rangeStart := (pageId - 1) * pageSize
-
-	var reports []crashreport.Report
-	querySelect := fmt.Sprintf("SELECT id, version, message FROM crash_reports %s ORDER BY id DESC LIMIT %d, %d", filter, rangeStart, pageSize)
-	err = db.Select(&reports, querySelect, filterParams...)
-	if err != nil {
-		log.Println(err)
-		log.Println(querySelect)
-		view.ErrorTemplate(w, "", http.StatusInternalServerError)
-		return
-	}
-
-	view.ExecuteListTemplate(w, reports, r.URL.String(), pageId, rangeStart, total)
+	return pageID, nil
 }

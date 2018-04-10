@@ -2,10 +2,10 @@ package handler
 
 import (
 	"net/http"
-
-	"github.com/pmmp/CrashArchive/app/view"
 )
 
-func HomeGet(w http.ResponseWriter, r *http.Request) {
-	view.ExecuteTemplate(w, "home", nil)
+type Home struct{ *Common }
+
+func (h Home) Get(w http.ResponseWriter, r *http.Request) {
+	h.View.Execute(w, "home", nil)
 }

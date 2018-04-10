@@ -12,15 +12,18 @@ import (
 	"time"
 )
 
-type Webhook struct{
-	slackURL         string
-	slackTime        time.Time
-	mux              sync.Mutex
+type Webhook struct {
+	slackURL  string
+	slackTime time.Time
+	mux       sync.Mutex
 }
 
 func New(slackURL string) *Webhook {
+	if slackURL == "" {
+		return nil
+	}
 	return &Webhook{
-		slackURL:  slackURL,
+		slackURL: slackURL,
 	}
 }
 

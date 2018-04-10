@@ -13,17 +13,13 @@ var (
 	salt string = "pepper"
 )
 
-func ReadFile(id int64) (*CrashReport, map[string]interface{}, error) {
+func ReadFile(path string, id int64) (*CrashReport, map[string]interface{}, error) {
 	var err error
 
 	var jsonData map[string]interface{}
-	filePath := fmt.Sprintf("reports/%s.log", filenameHash(id))
+	filePath := fmt.Sprintf("%s/%s.log", path, filenameHash(id))
 	if _, err = os.Stat(filePath); os.IsNotExist(err) {
 		log.Printf("%v\n", err)
-		//app.tmpl.ExecuteTemplate(w, "error", map[string]interface{}{
-		//	"Message": "Report not found",
-		//	"URL":     "/home",
-		//})
 		return nil, jsonData, err
 	}
 
@@ -48,7 +44,7 @@ func ReadFile(id int64) (*CrashReport, map[string]interface{}, error) {
 
 	return report, jsonData, nil
 }
-func (r *CrashReport) WriteFile(id int64, name, email string) error {
+func (r *CrashReport) WriteFile(path string, id int64, name, email string) error {
 	data := map[string]interface{}{
 		"report":        r.EncodeCrashReport(),
 		"reportId":      id,
@@ -57,7 +53,7 @@ func (r *CrashReport) WriteFile(id int64, name, email string) error {
 		"attachedIssue": false,
 	}
 
-	fout, err := os.Create(fmt.Sprintf("./reports/%s.log", filenameHash(id)))
+	fout, err := os.Create(fmt.Sprintf("%s/%s.log", path, filenameHash(id)))
 	if err != nil {
 		return err
 	}

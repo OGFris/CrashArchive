@@ -33,7 +33,7 @@ func New(config *Config) (*DB, error) {
 			log.Printf("Connected to database")
 			return &DB{db}, nil
 		}
-
+		log.Println(err)
 		if i != retryTimes {
 			time.Sleep(retryDelay)
 		}
@@ -85,4 +85,28 @@ func (db *DB) CheckDuplicate(report *crashreport.CrashReport) (int, error) {
 	}
 
 	return dupes, nil
+}
+
+func (db *DB) GetFilteredReports(pageID, pageSize int, filter string, params ...interface{}) (int, int, []crashreport.Report, error) {
+	var reports []crashreport.Report
+	var total int
+
+	queryCount := fmt.Sprintf("SELECT COUNT(*) FROM crash_reports %s", filter)
+	if err := db.Get(&total, queryCount, params...); err != nil {
+		log.Println(queryCount)
+		return 0, 0, reports, err
+	}
+
+	if (pageID-1)*pageSize > total {
+		return 0, 0, reports, errors.New("one page too many")
+	}
+
+	rangeStart := (pageID - 1) * pageSize
+	querySelect := fmt.Sprintf("SELECT id, version, message FROM crash_reports %s ORDER BY id DESC LIMIT %d, %d", filter, rangeStart, pageSize)
+	if err := db.Select(&reports, querySelect, params...); err != nil {
+		log.Println(querySelect)
+		return 0, 0, reports, err
+	}
+
+	return total, rangeStart, reports, nil
 }

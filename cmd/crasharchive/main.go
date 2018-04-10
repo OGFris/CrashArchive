@@ -9,6 +9,7 @@ import (
 
 	"github.com/pmmp/CrashArchive/app"
 	"github.com/pmmp/CrashArchive/app/database"
+	"github.com/pmmp/CrashArchive/app/handler"
 	"github.com/pmmp/CrashArchive/app/router"
 	"github.com/pmmp/CrashArchive/app/view"
 	"github.com/pmmp/CrashArchive/app/webhook"
@@ -29,13 +30,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := view.Preload(config.Templates); err != nil {
+	view, err := view.Load(config.Templates)
+	if err != nil {
 		log.Fatal(err)
-	}
-
-	var wh *webhook.Webhook = nil
-	if config.SlackURL != "" {
-		wh = webhook.New(config.SlackURL)
 	}
 
 	db, err := database.New(config.Database)
@@ -43,7 +40,15 @@ func main() {
 		log.Fatal(fmt.Errorf("database error: %v", err))
 	}
 
-	r := router.New(db, wh)
+	c := &handler.Common{
+		DB:      db,
+		WH:      webhook.New(config.SlackURL),
+		View:    view,
+		Assets:  config.Assets,
+		Reports: config.Reports,
+	}
+
+	r := router.New(c)
 	log.Printf("listening on: %s\n", config.ListenAddress)
 	if err = http.ListenAndServe(config.ListenAddress, r); err != nil {
 		log.Fatal(err)

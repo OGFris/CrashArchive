@@ -9,20 +9,21 @@ import (
 
 	"github.com/go-chi/chi"
 	"github.com/pmmp/CrashArchive/app/crashreport"
-	"github.com/pmmp/CrashArchive/app/view"
 )
 
-func DownloadGet(w http.ResponseWriter, r *http.Request) {
+type Download struct{ *Common }
+
+func (d Download) Get(w http.ResponseWriter, r *http.Request) {
 	reportID, err := strconv.Atoi(chi.URLParam(r, "reportID"))
 	if err != nil {
 		log.Println(err)
-		view.ErrorTemplate(w, "", http.StatusBadRequest)
+		d.View.Error(w, "", http.StatusBadRequest)
 		return
 	}
 
-	_, jsonData, err := crashreport.ReadFile(int64(reportID))
+	_, jsonData, err := crashreport.ReadFile(d.Reports, int64(reportID))
 	if err != nil {
-		view.ErrorTemplate(w, "Report not found", http.StatusNotFound)
+		d.View.Error(w, "Report not found", http.StatusNotFound)
 		return
 	}
 

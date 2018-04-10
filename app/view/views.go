@@ -13,20 +13,20 @@ const (
 	templateLayout    = "layout"
 )
 
-var t map[string]*template.Template
+type Views map[string]*template.Template
 
-func Preload(path string) error {
-	t = make(map[string]*template.Template)
+func Load(path string) (Views, error) {
+	views := make(Views, 0)
 	abs, _ := filepath.Abs(path)
 
-	layoutFiles, err := filepath.Glob(filepath.Join(abs, "layout", "*"+templateExtension))
+	layoutFiles, err := filepath.Glob(filepath.Join(abs, templateLayout, "*"+templateExtension))
 	if err != nil {
-		return err
+		return views, err
 	}
 
 	pageFiles, err := filepath.Glob(filepath.Join(abs, "*"+templateExtension))
 	if err != nil {
-		return err
+		return views, err
 	}
 
 	for _, page := range pageFiles {
@@ -36,29 +36,29 @@ func Preload(path string) error {
 		name := fname[:len(fname)-len(templateExtension)]
 		tmpl, err := template.New(name).Funcs(funcMap).ParseFiles(templateFiles...)
 		if err != nil {
-			return err
+			return views, err
 		}
-		t[name] = tmpl
+		views[name] = tmpl
 	}
-	return nil
+	return views, nil
 }
 
-func ExecuteTemplate(w http.ResponseWriter, name string, data interface{}) error {
-	if tmpl, ok := t[name]; ok {
+func (v Views) Execute(w http.ResponseWriter, name string, data interface{}) error {
+	if tmpl, ok := v[name]; ok {
 		return tmpl.ExecuteTemplate(w, "base.html", data)
 	}
-	return ErrorTemplate(w, "", http.StatusInternalServerError)
+	return v.Error(w, "", http.StatusInternalServerError)
 }
 
-func ErrorTemplate(w http.ResponseWriter, message string, status int) error {
+func (v Views) Error(w http.ResponseWriter, message string, status int) error {
 	w.WriteHeader(status)
 	if message == "" {
 		message = http.StatusText(status)
 	}
-	return t["error"].ExecuteTemplate(w, "base.html", struct{ Message string }{message})
+	return v["error"].ExecuteTemplate(w, "base.html", struct{ Message string }{message})
 }
 
-func ExecuteListTemplate(w http.ResponseWriter, reports []crashreport.Report, url string, id int, start int, total int) {
+func (v Views) ExecuteList(w http.ResponseWriter, reports []crashreport.Report, url string, id int, start int, total int) {
 	cnt := len(reports)
 
 	data := map[string]interface{}{
@@ -83,5 +83,5 @@ func ExecuteListTemplate(w http.ResponseWriter, reports []crashreport.Report, ur
 	if start+cnt < total {
 		data["NextPage"] = id + 1
 	}
-	ExecuteTemplate(w, "list", data)
+	v.Execute(w, "list", data)
 }

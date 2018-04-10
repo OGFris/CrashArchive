@@ -9,13 +9,10 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 
-	"github.com/pmmp/CrashArchive/app/database"
 	"github.com/pmmp/CrashArchive/app/handler"
-	"github.com/pmmp/CrashArchive/app/view"
-	"github.com/pmmp/CrashArchive/app/webhook"
 )
 
-func New(db *database.DB, wh *webhook.Webhook) *chi.Mux {
+func New(c *handler.Common) *chi.Mux {
 	r := chi.NewRouter()
 
 	staticDirs := []string{"/css", "/js", "/fonts"}
@@ -30,27 +27,16 @@ func New(db *database.DB, wh *webhook.Webhook) *chi.Mux {
 		r.Use(middleware.Logger)
 
 		r.NotFound(func(w http.ResponseWriter, r *http.Request) {
-			view.ErrorTemplate(w, "", http.StatusNotFound)
+			c.View.Error(w, "", http.StatusNotFound)
 		})
 
-		r.Get("/", handler.HomeGet)
-		r.Get("/list", handler.ListGet(db))
-		r.Get("/view/{reportID}", handler.ViewIDGet)
-		r.Get("/download/{reportID}", handler.DownloadGet)
+		r.Get("/", handler.Home{c}.Get)
+		r.Get("/list", handler.List{c}.Get)
+		r.Get("/view/{reportID}", handler.View{c}.Get)
+		r.Get("/download/{reportID}", handler.Download{c}.Get)
 
-		r.Route("/search", func(r chi.Router) {
-			r.Get("/", handler.SearchGet)
-			r.Get("/id", handler.SearchIDGet)
-			r.Get("/plugin", handler.SearchPluginGet(db))
-			r.Get("/build", handler.SearchBuildGet(db))
-			r.Get("/report", handler.SearchReportGet(db))
-		})
-
-		r.Route("/submit", func(r chi.Router) {
-			r.Get("/", handler.SubmitGet)
-			r.Post("/", handler.SubmitPost(db, wh))
-			r.Post("/api", handler.SubmitPost(db, wh))
-		})
+		r.Mount("/search", handler.Search{c}.Routes())
+		r.Mount("/submit", handler.Submit{c}.Routes())
 	})
 	return r
 }

@@ -10,104 +10,93 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/go-chi/chi"
 	"github.com/pmmp/CrashArchive/app/crashreport"
-	"github.com/pmmp/CrashArchive/app/database"
-	"github.com/pmmp/CrashArchive/app/view"
-	"github.com/pmmp/CrashArchive/app/webhook"
 )
 
-func SubmitGet(w http.ResponseWriter, r *http.Request) {
-	view.ExecuteTemplate(w, "submit", nil)
+type Submit struct{ *Common }
+
+func (s Submit) Routes() chi.Router {
+	r := chi.NewRouter()
+	r.Get("/", s.Get)
+	r.Post("/", s.Post)
+	r.Post("/api", s.Post)
+	return r
 }
 
-func SubmitPost(db *database.DB, wh *webhook.Webhook) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if r.FormValue("report") != "yes" {
-			http.Redirect(w, r, "/submit", http.StatusMovedPermanently)
-			return
-		}
+func (s Submit) Get(w http.ResponseWriter, r *http.Request) {
+	s.View.Execute(w, "submit", nil)
+}
 
-		if err := r.ParseMultipartForm(1024 * 256); err != nil {
-			http.Redirect(w, r, "/submit", http.StatusMovedPermanently)
-			return
-		}
+func multipartForm(r *http.Request) (string, error) {
+	if r.FormValue("report") != "yes" {
+		return "", errors.New("report is not yes")
+	}
 
-		reportStr, err := ParseMultipartForm(r.MultipartForm)
-		if err != nil {
-			http.Redirect(w, r, "/submit", http.StatusMovedPermanently)
-			return
-		}
+	if err := r.ParseMultipartForm(1024 * 256); err != nil {
+		return "", err
+	}
 
-		isAPI := strings.HasSuffix(r.RequestURI, "/api")
+	return ParseMultipartForm(r.MultipartForm)
+}
 
-		defer func() {
-			if recovered := recover(); recovered != nil {
-				err, ok := recovered.(error)
-				if !ok {
-					err = fmt.Errorf("%v", recovered)
-				}
+func (s Submit) Post(w http.ResponseWriter, r *http.Request) {
+	reportStr, err := multipartForm(r)
+	if err != nil {
+		http.Redirect(w, r, "/submit", http.StatusMovedPermanently)
+	}
 
-				log.Printf("got invalid crash report from: %s (%v)", r.RemoteAddr, err)
-				sendError(w, "This crash report is not valid", http.StatusUnprocessableEntity, isAPI)
-			}
-		}()
+	isAPI := strings.HasSuffix(r.RequestURI, "/api")
 
-		report, err := crashreport.DecodeCrashReport(reportStr)
-		if err != nil {
-			//this panic will be recovered in the above deferred function
-			log.Panic(err)
-		}
+	report, err := crashreport.DecodeCrashReport(reportStr)
+	if err != nil {
+		log.Printf("got invalid crash report from: %s (%v)", r.RemoteAddr, err)
+		s.sendError(w, "This crash report is not valid", http.StatusUnprocessableEntity, isAPI)
+		return
+	}
 
-		if report.Data.General.Name != "PocketMine-MP" {
-			log.Printf("spoon detected from: %s\n", r.RemoteAddr)
-			sendError(w, "", http.StatusTeapot, isAPI)
-			return
-		}
+	if err := report.Data.IsValid(); err != nil {
+		log.Printf("%s from: %s (%v)", err, r.RemoteAddr)
+		s.sendError(w, "", http.StatusTeapot, isAPI)
+		return
+	}
 
-		if report.Data.General.GIT == strings.Repeat("00", 20) || strings.HasSuffix(report.Data.General.GIT, "-dirty") {
-			log.Printf("invalid git hash %s in report from: %s\n", report.Data.General.GIT, r.RemoteAddr)
-			sendError(w, "", http.StatusTeapot, isAPI)
-			return
-		}
+	dupes, err := s.DB.CheckDuplicate(report)
+	report.Duplicate = dupes > 0
+	if dupes > 0 {
+		log.Printf("found %d duplicates of report from: %s", dupes, r.RemoteAddr)
+	}
 
-		dupes, err := db.CheckDuplicate(report)
-		report.Duplicate = dupes > 0
-		if dupes > 0 {
-			log.Printf("found %d duplicates of report from: %s", dupes, r.RemoteAddr)
-		}
+	id, err := s.DB.InsertReport(report)
+	if err != nil {
+		log.Printf("failed to insert report into database: %v", err)
+		s.sendError(w, "", http.StatusInternalServerError, isAPI)
+		return
+	}
 
-		id, err := db.InsertReport(report)
-		if err != nil {
-			log.Printf("failed to insert report into database: %v", err)
-			sendError(w, "", http.StatusInternalServerError, isAPI)
-			return
-		}
+	name := r.FormValue("name")
+	email := r.FormValue("email")
+	if err = report.WriteFile(s.Reports, id, name, email); err != nil {
+		log.Printf("failed to write file: %d\n", id)
+		s.sendError(w, "", http.StatusInternalServerError, isAPI)
+		return
+	}
 
-		name := r.FormValue("name")
-		email := r.FormValue("email")
-		if err = report.WriteFile(id, name, email); err != nil {
-			log.Printf("failed to write file: %d\n", id)
-			sendError(w, "", http.StatusInternalServerError, isAPI)
-			return
-		}
+	if !report.Duplicate && s.WH != nil {
+		go s.WH.Post(name, id, report.Error.Message)
+	}
 
-		if !report.Duplicate && wh != nil {
-			go wh.Post(name, id, report.Error.Message)
-		}
-
-		if isAPI {
-			jsonResponse(w, map[string]interface{}{
-				"crashId":  id,
-				"crashUrl": fmt.Sprintf("https://crash.pmmp.io/view/%d", id),
-			})
-		} else {
-			http.Redirect(w, r, fmt.Sprintf("/view/%d", id), http.StatusMovedPermanently)
-		}
-
+	if isAPI {
+		jsonResponse(w, map[string]interface{}{
+			"crashId":  id,
+			"crashUrl": fmt.Sprintf("https://crash.pmmp.io/view/%d", id),
+		})
+	} else {
+		http.Redirect(w, r, fmt.Sprintf("/view/%d", id), http.StatusMovedPermanently)
 	}
 }
 
-func sendError(w http.ResponseWriter, message string, status int, isAPI bool) {
+func (s Submit) sendError(w http.ResponseWriter, message string, status int, isAPI bool) {
 	if isAPI {
 		w.WriteHeader(status)
 		if message == "" {
@@ -117,7 +106,7 @@ func sendError(w http.ResponseWriter, message string, status int, isAPI bool) {
 			"error": message,
 		})
 	} else {
-		view.ErrorTemplate(w, message, status)
+		s.View.Error(w, message, status)
 	}
 }
 
